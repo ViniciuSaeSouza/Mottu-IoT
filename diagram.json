@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "author": "Vinícius Saes de souza",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "board-esp32-devkit-c-v4", "id": "esp", "top": 57.6, "left": -110.36, "attrs": {} },
+    {
+      "type": "wokwi-neopixel",
+      "id": "neopixel",
+      "top": 217.3,
+      "left": 37.4,
+      "attrs": { "pixels": "1", "colorOrder": "GRB", "label": "NeoPixel" }
+    },
+    {
+      "type": "wokwi-buzzer",
+      "id": "buzzer",
+      "top": 117.6,
+      "left": 40.2,
+      "attrs": { "label": "Buzzer" }
+    },
+    {
+      "type": "wokwi-battery",
+      "id": "batt",
+      "top": 300,
+      "left": 0,
+      "attrs": { "voltage": "3.7" }
+    }
+  ],
+  "connections": [
+    [ "esp:2", "neopixel:DIN", "green", [ "v0" ] ],
+    [ "batt:+", "neopixel:VDD", "red", [ "v0" ] ],
+    [ "neopixel:GND", "esp:GND", "black", [ "v0" ] ],
+    [ "batt:+", "esp:VIN", "red", [ "v0" ] ],
+    [ "batt:-", "esp:GND", "black", [ "v0" ] ],
+    [ "esp:4", "buzzer:1", "green", [ "v0" ] ],
+    [ "buzzer:2", "esp:GND", "black", [ "v0" ] ],
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ]
+  ],
+  "dependencies": {}
+}
