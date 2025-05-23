@@ -35,7 +35,7 @@ O projeto visa otimizar a localização de motocicletas nos pátios da empresa M
 ---
 
 ## 📁 Estrutura do Projeto
-smartPatio/ 
+smartPatio/
 ├── src/ 
 │ └── main.cpp # Código-fonte principal do firmware 
 ├── platformio.ini # Configuração do PlatformIO 
