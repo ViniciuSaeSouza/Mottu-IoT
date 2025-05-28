@@ -31,16 +31,53 @@ O projeto visa otimizar a localização de motocicletas nos pátios da empresa M
 - Publicação de status no tópico MQTT.
 - Reconexão automática em caso de perda de conexão.
 - Feedback visual de status de conexão (cores do NeoPixel).
+- Integração futura com triangulação Wi-Fi para rastreamento.
+
+---
+
+## 📡 Triangulação de Sinal 
+
+Para aumentar a precisão na localização das motocicletas em pátios maiores,  uma camada adicional de rastreamento com triangulação baseada na intensidade do sinal Wi-Fi (RSSI) entre múltiplos pontos de escuta (ESP32) será adicionada.
+
+### 📍 Como funciona:
+- Múltiplos dispositivos ESP32 ficam fixos no pátio e atuam como “beacons passivos”.
+- Cada moto emite pacotes periódicos contendo seu ID único.
+- Os pontos fixos registram a intensidade do sinal (RSSI) desses pacotes.
+- A média ponderada da intensidade dos sinais recebidos por cada ponto é usada para estimar a zona aproximada da moto.
+### 📶 Fluxo da Triangulação
+
+1. **Moto (ESP32 móvel)** emite pacotes contendo seu ID (broadcast UDP ou MQTT retain).
+2. **ESP32 fixos** escutam esses pacotes e registram:
+   - RSSI (força do sinal)
+   - Timestamp
+   - ID do emissor (ex: `MOTO_123`)
+3. Cada ponto envia os dados para o broker MQTT:
+   - Tópico: `smartpatio/scan`
+   - Mensagem JSON:
+     ```json
+     {
+       "id_moto": "MOTO_123",
+       "rssi": -58,
+       "ponto": "P1",
+       "timestamp": 1716552712
+     }
+     ```
+4. O backend processa os valores de RSSI de múltiplos pontos para estimar a posição relativa da moto em uma zona (ex: Zona A, Zona B).
+
+> ⚠️ Esta funcionalidade é teórica nesta versão do projeto e será implementada futuramente.
 
 ---
 
 ## 📁 Estrutura do Projeto
+
+```
 smartPatio/
-├── src/ 
-│ └── main.cpp # Código-fonte principal do firmware 
-├── platformio.ini # Configuração do PlatformIO 
-├── wokwi.toml # Configuração para simulação Wokwi 
-├── README.md # Este documento
+├── src/
+│   └── main.cpp          # Código-fonte principal do firmware
+├── platformio.ini        # Configuração do PlatformIO
+├── wokwi.toml            # Configuração para simulação Wokwi
+└── README.md             # Este documento
+```
 
 ---
 
@@ -74,6 +111,7 @@ smartPatio/
 - Redução do tempo de localização de motocicletas.
 - Melhoria na eficiência operacional do pátio.
 - Facilidade de integração com sistemas mobile e web.
+- Expansão futura com localização por zonas via triangulação.
 
 ---
 
