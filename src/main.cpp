@@ -13,7 +13,12 @@ void publishStatus(const char* status);
 
 /* --- Identificação do Dispositivo --- */
 const char* GROUP_ID = "SmartPatio";
-const char* DEVICE_ID = "PATIO_001";
+#ifndef DEVICE_ID_STR
+#define DEVICE_ID_STR TESTE
+#endif
+#define STR_HELPER(x) #x
+#define STR(x) STR_HELPER(x)
+static const char* DEVICE_ID = STR(DEVICE_ID_STR);
 
 /* --- Configurações de Rede Wi-Fi --- */
 const char* WIFI_SSID = "Wokwi-GUEST";
@@ -24,9 +29,10 @@ const char* MQTT_BROKER = "broker.hivemq.com";
 const int MQTT_PORT = 1883;
 const char* MQTT_USER = "";
 const char* MQTT_PASSWORD = "";
+
 /* --- Tópicos MQTT --- */
-const char* TOPIC_SUBSCRIBE = "smartpatio/commands/PATIO_001";
-const char* TOPIC_PUBLISH = "smartpatio/status";
+char TOPIC_SUBSCRIBE[64];
+char TOPIC_PUBLISH[64];
 
 /* --- Definições de Hardware --- */
 #define BUZZER_PIN 4
@@ -72,6 +78,10 @@ void setup() {
   neoPixel.begin();            // Inicializa NeoPixel
   neoPixel.show();
   Serial.println("- Hardware configurado");
+
+  // Concatena tópico de inscrição com ID do dispositivo
+  snprintf(TOPIC_SUBSCRIBE, sizeof(TOPIC_SUBSCRIBE), "smartpatio/commands/%s", DEVICE_ID);
+  snprintf(TOPIC_PUBLISH, sizeof(TOPIC_PUBLISH), "smartpatio/status/%s", DEVICE_ID);
 
   connectWiFi();   // Conecta ao Wi-Fi
   connectMQTT();   // Conecta ao MQTT
