@@ -1,0 +1,43 @@
+2025-10-01 14:30:33,076 - INFO - Arquivo CSV criado: smartpatio_data.csv
+2025-10-01 14:31:13,022 - INFO - Iniciando sistema de persistência SmartPatio...
+2025-10-01 14:31:13,267 - INFO - Conectando ao broker broker.hivemq.com:1883
+2025-10-01 14:31:13,464 - INFO - Conectado ao broker MQTT
+2025-10-01 14:31:13,465 - INFO - Subscrito ao tópico: smartpatio/status/+
+2025-10-01 14:31:13,465 - INFO - Subscrito ao tópico: smartpatio/telemetry/+
+2025-10-01 14:31:13,465 - INFO - Subscrito ao tópico: smartpatio/commands/+
+2025-10-01 14:32:15,143 - INFO - Mensagem recebida: smartpatio/status/SIM02 -> SmartPatio|SIM02|CONNECTED
+2025-10-01 14:32:16,016 - INFO - Mensagem recebida: smartpatio/status/SIM01 -> SmartPatio|SIM01|CONNECTED
+2025-10-01 14:32:18,501 - INFO - Mensagem recebida: smartpatio/status/SIM03 -> SmartPatio|SIM03|CONNECTED
+2025-10-01 14:32:18,523 - INFO - Mensagem recebida: smartpatio/telemetry/SIM01 -> {"device_id": "SIM01", "timestamp": 1759339938321, "device_active": false, "led_blinking": false, "buzzer_active": false, "wifi_rssi": -47}
+2025-10-01 14:32:19,731 - INFO - Mensagem recebida: smartpatio/telemetry/SIM02 -> {"device_id": "SIM02", "timestamp": 1759339939530, "device_active": false, "led_blinking": false, "buzzer_active": false, "wifi_rssi": -57}
+2025-10-01 14:32:20,927 - INFO - Mensagem recebida: smartpatio/telemetry/SIM03 -> {"device_id": "SIM03", "timestamp": 1759339940730, "device_active": false, "led_blinking": false, "buzzer_active": false, "wifi_rssi": -49}
+2025-10-01 14:32:23,524 - INFO - Mensagem recebida: smartpatio/telemetry/SIM01 -> {"device_id": "SIM01", "timestamp": 1759339943322, "device_active": false, "led_blinking": false, "buzzer_active": false, "wifi_rssi": -46}
+2025-10-01 14:32:24,732 - INFO - Mensagem recebida: smartpatio/telemetry/SIM02 -> {"device_id": "SIM02", "timestamp": 1759339944530, "device_active": false, "led_blinking": false, "buzzer_active": false, "wifi_rssi": -52}
+2025-10-01 14:32:25,928 - INFO - Mensagem recebida: smartpatio/telemetry/SIM03 -> {"device_id": "SIM03", "timestamp": 1759339945731, "device_active": false, "led_blinking": false, "buzzer_active": false, "wifi_rssi": -49}
+2025-10-01 14:32:28,525 - INFO - Mensagem recebida: smartpatio/telemetry/SIM01 -> {"device_id": "SIM01", "timestamp": 1759339948322, "device_active": false, "led_blinking": false, "buzzer_active": false, "wifi_rssi": -48}
+2025-10-01 14:32:29,735 - INFO - Mensagem recebida: smartpatio/telemetry/SIM02 -> {"device_id": "SIM02", "timestamp": 1759339949531, "device_active": false, "led_blinking": false, "buzzer_active": false, "wifi_rssi": -54}
+2025-10-01 14:32:30,928 - INFO - Mensagem recebida: smartpatio/telemetry/SIM03 -> {"device_id": "SIM03", "timestamp": 1759339950732, "device_active": false, "led_blinking": false, "buzzer_active": false, "wifi_rssi": -51}
+2025-10-01 14:32:33,525 - INFO - Mensagem recebida: smartpatio/telemetry/SIM01 -> {"device_id": "SIM01", "timestamp": 1759339953323, "device_active": false, "led_blinking": false, "buzzer_active": false, "wifi_rssi": -43}
+2025-10-01 14:32:34,733 - INFO - Mensagem recebida: smartpatio/telemetry/SIM02 -> {"device_id": "SIM02", "timestamp": 1759339954531, "device_active": false, "led_blinking": false, "buzzer_active": false, "wifi_rssi": -56}
+2025-10-01 14:32:35,929 - INFO - Mensagem recebida: smartpatio/telemetry/SIM03 -> {"device_id": "SIM03", "timestamp": 1759339955733, "device_active": false, "led_blinking": false, "buzzer_active": false, "wifi_rssi": -52}
+2025-10-01 14:32:38,526 - INFO - Mensagem recebida: smartpatio/telemetry/SIM01 -> {"device_id": "SIM01", "timestamp": 1759339958324, "device_active": false, "led_blinking": false, "buzzer_active": false, "wifi_rssi": -42}
+2025-10-01 14:32:39,734 - INFO - Mensagem recebida: smartpatio/telemetry/SIM02 -> {"device_id": "SIM02", "timestamp": 1759339959532, "device_active": false, "led_blinking": false, "buzzer_active": false, "wifi_rssi": -53}
+2025-10-01 14:32:40,930 - INFO - Mensagem recebida: smartpatio/telemetry/SIM03 -> {"device_id": "SIM03", "timestamp": 1759339960734, "device_active": false, "led_blinking": false, "buzzer_active": false, "wifi_rssi": -48}
+2025-10-01 14:32:43,527 - INFO - Mensagem recebida: smartpatio/telemetry/SIM01 -> {"device_id": "SIM01", "timestamp": 1759339963324, "device_active": false, "led_blinking": false, "buzzer_active": false, "wifi_rssi": -42}
+2025-10-01 14:32:44,735 - INFO - Mensagem recebida: smartpatio/telemetry/SIM02 -> {"device_id": "SIM02", "timestamp": 1759339964533, "device_active": false, "led_blinking": false, "buzzer_active": false, "wifi_rssi": -53}
+2025-10-01 14:32:45,931 - INFO - Mensagem recebida: smartpatio/telemetry/SIM03 -> {"device_id": "SIM03", "timestamp": 1759339965734, "device_active": false, "led_blinking": false, "buzzer_active": false, "wifi_rssi": -43}
+2025-10-01 14:32:47,534 - INFO - Mensagem recebida: smartpatio/status/SIM01 -> SmartPatio|SIM01|DISCONNECTED
+2025-10-01 14:32:48,541 - INFO - Mensagem recebida: smartpatio/status/SIM02 -> SmartPatio|SIM02|DISCONNECTED
+2025-10-01 14:32:49,540 - INFO - Mensagem recebida: smartpatio/status/SIM03 -> SmartPatio|SIM03|DISCONNECTED
+2025-10-01 14:34:08,096 - INFO - Interrompido pelo usuário
+2025-10-01 14:34:08,096 - WARNING - Desconectado do broker MQTT
+2025-10-01 14:34:17,228 - INFO - Arquivo CSV criado: src/output/smartpatio_data.csv
+2025-10-01 14:34:17,228 - INFO - Iniciando sistema de persistência SmartPatio...
+2025-10-01 14:34:17,484 - INFO - Conectando ao broker broker.hivemq.com:1883
+2025-10-01 14:34:17,678 - ERROR - Erro no sistema: SmartPatioDataLogger.on_connect() takes 5 positional arguments but 6 were given
+2025-10-01 14:35:33,413 - INFO - Iniciando sistema de persistência SmartPatio...
+2025-10-01 14:35:33,665 - INFO - Conectando ao broker broker.hivemq.com:1883
+2025-10-01 14:35:36,090 - INFO - Conectado ao broker MQTT
+2025-10-01 14:35:36,090 - INFO - Subscrito ao tópico: smartpatio/status/+
+2025-10-01 14:35:36,091 - INFO - Subscrito ao tópico: smartpatio/telemetry/+
+2025-10-01 14:35:36,091 - INFO - Subscrito ao tópico: smartpatio/commands/+
