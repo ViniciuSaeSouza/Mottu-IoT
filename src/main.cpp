@@ -10,6 +10,7 @@ void handleMQTTMessage(char* topic, byte* payload, unsigned int length);
 void activateDevice();
 void deactivateDevice();
 void publishStatus(const char* status);
+void publishTelemetry();
 
 /* --- Identificação do Dispositivo --- */
 const char* GROUP_ID = "SmartPatio";
@@ -33,6 +34,7 @@ const char* MQTT_PASSWORD = "";
 /* --- Tópicos MQTT --- */
 char TOPIC_SUBSCRIBE[64];
 char TOPIC_PUBLISH[64];
+char TOPIC_TELEMETRY[64];
 
 /* --- Definições de Hardware --- */
 #define BUZZER_PIN 4
@@ -50,6 +52,9 @@ bool blinking = false;
 unsigned long lastToneTime = 0;
 int toneIndex = 0;
 bool shouldPlayTone = false;
+
+// Telemetria
+unsigned long lastTelemetryPublish = 0;
 
 // Musical notes (frequencies in Hz) - Pop-style melody
 int melody[] = {659, 698, 784, 659, 523, 587, 659, 523}; // E5, F5, G5, E5, C5, D5, E5, C5 (pop-style melody)
@@ -82,6 +87,7 @@ void setup() {
   // Concatena tópico de inscrição com ID do dispositivo
   snprintf(TOPIC_SUBSCRIBE, sizeof(TOPIC_SUBSCRIBE), "smartpatio/commands/%s", DEVICE_ID);
   snprintf(TOPIC_PUBLISH, sizeof(TOPIC_PUBLISH), "smartpatio/status/%s", DEVICE_ID);
+  snprintf(TOPIC_TELEMETRY, sizeof(TOPIC_TELEMETRY), "smartpatio/telemetry/%s", DEVICE_ID);
 
   connectWiFi();   // Conecta ao Wi-Fi
   connectMQTT();   // Conecta ao MQTT
@@ -125,6 +131,13 @@ void loop() {
       ledcWriteTone(PWM_CHANNEL, melody[toneIndex]);
       ledcWrite(PWM_CHANNEL, volumeLevel); // Set volume level
     }
+  }
+  
+  // Publica telemetria a cada 5 segundos
+  unsigned long now = millis();
+  if (now - lastTelemetryPublish > 5000) {
+    publishTelemetry();
+    lastTelemetryPublish = now;
   }
   
 }
@@ -269,4 +282,23 @@ void publishStatus(const char* status) {
   Serial.println(message);
 
   mqttClient.publish(TOPIC_PUBLISH, message.c_str());
+}
+
+void publishTelemetry() {
+  if (mqttClient.connected()) {
+    // Cria JSON com dados de telemetria
+    String telemetry = "{";
+    telemetry += "\"device_id\":\"" + String(DEVICE_ID) + "\",";
+    telemetry += "\"timestamp\":" + String(millis()) + ",";
+    telemetry += "\"device_active\":" + String(deviceActive ? "true" : "false") + ",";
+    telemetry += "\"led_blinking\":" + String(blinking ? "true" : "false") + ",";
+    telemetry += "\"buzzer_active\":" + String(shouldPlayTone ? "true" : "false") + ",";
+    telemetry += "\"wifi_rssi\":" + String(WiFi.RSSI());
+    telemetry += "}";
+    
+    Serial.print("[TELEMETRIA] Publicando: ");
+    Serial.println(telemetry);
+    
+    mqttClient.publish(TOPIC_TELEMETRY, telemetry.c_str());
+  }
 }

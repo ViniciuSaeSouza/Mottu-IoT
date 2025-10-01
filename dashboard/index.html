@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartPatio Dashboard - Mottu IoT</title>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .status-card {
+            text-align: center;
+        }
+
+        .status-indicator {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .status-online {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+        }
+
+        .status-offline {
+            background: linear-gradient(135deg, #f44336, #d32f2f);
+        }
+
+        .status-active {
+            background: linear-gradient(135deg, #FF9800, #F57C00);
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .metric-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .device-list {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .device-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            transition: background-color 0.3s ease;
+        }
+
+        .device-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .device-item:last-child {
+            border-bottom: none;
+        }
+
+        .device-info {
+            flex: 1;
+        }
+
+        .device-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .device-details {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .device-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-activate {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-activate:hover {
+            background: #45a049;
+        }
+
+        .btn-deactivate {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-deactivate:hover {
+            background: #d32f2f;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+        }
+
+        .connected {
+            background: #4CAF50;
+        }
+
+        .disconnected {
+            background: #f44336;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .pulsing {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="connection-status" id="connectionStatus">Conectando...</div>
+    
+    <div class="container">
+        <div class="header">
+            <h1>🚦 SmartPatio Dashboard</h1>
+            <p>Sistema de Monitoramento IoT - Mottu Challenge</p>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="card status-card">
+                <h3>Status de Conexão</h3>
+                <div class="status-indicator status-offline" id="mqttStatus">
+                    📡
+                </div>
+                <div id="mqttStatusText">Desconectado</div>
+            </div>
+
+            <div class="card">
+                <h3>Dispositivos Ativos</h3>
+                <div class="metric-value" id="activeDevices">0</div>
+                <div class="metric-label">de <span id="totalDevices">0</span> dispositivos</div>
+            </div>
+
+            <div class="card">
+                <h3>Sinal Wi-Fi Médio</h3>
+                <div class="metric-value" id="avgRSSI">--dBm</div>
+                <div class="metric-label">Intensidade do sinal</div>
+            </div>
+
+            <div class="card">
+                <h3>Mensagens Recebidas</h3>
+                <div class="metric-value" id="messageCount">0</div>
+                <div class="metric-label">Total de mensagens MQTT</div>
+            </div>
+        </div>
+
+        <div class="device-list">
+            <h3>Dispositivos Conectados</h3>
+            <div id="devicesList">
+                <div style="text-align: center; color: #666; padding: 20px;">
+                    Aguardando dispositivos...
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <h3>Status dos Atuadores em Tempo Real</h3>
+            <canvas id="actuatorChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // Configurações MQTT
+        const MQTT_BROKER = 'wss://broker.hivemq.com:8884/mqtt';
+        
+        // Variáveis globais
+        let client = null;
+        let devices = new Map();
+        let messageCount = 0;
+        let actuatorData = [];
+        let actuatorChart = null;
+
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', function() {
+            initMQTT();
+            initChart();
+            setInterval(updateMetrics, 1000);
+        });
+
+        function initMQTT() {
+            try {
+                client = mqtt.connect(MQTT_BROKER);
+                
+                client.on('connect', function() {
+                    console.log('Conectado ao broker MQTT');
+                    updateConnectionStatus(true);
+                    
+                    // Subscreve aos tópicos
+                    client.subscribe('smartpatio/status/+');
+                    client.subscribe('smartpatio/telemetry/+');
+                    
+                    console.log('Subscrito aos tópicos smartpatio');
+                });
+
+                client.on('message', function(topic, message) {
+                    handleMQTTMessage(topic, message.toString());
+                });
+
+                client.on('error', function(error) {
+                    console.error('Erro MQTT:', error);
+                    updateConnectionStatus(false);
+                });
+
+                client.on('close', function() {
+                    console.log('Conexão MQTT fechada');
+                    updateConnectionStatus(false);
+                });
+
+            } catch (error) {
+                console.error('Erro ao conectar MQTT:', error);
+                updateConnectionStatus(false);
+            }
+        }
+
+        function handleMQTTMessage(topic, message) {
+            messageCount++;
+            console.log('Mensagem recebida:', topic, message);
+
+            if (topic.startsWith('smartpatio/status/')) {
+                handleStatusMessage(topic, message);
+            } else if (topic.startsWith('smartpatio/telemetry/')) {
+                handleTelemetryMessage(topic, message);
+            }
+        }
+
+        function handleStatusMessage(topic, message) {
+            const deviceId = topic.split('/')[2];
+            const parts = message.split('|');
+            
+            if (parts.length >= 3) {
+                const groupId = parts[0];
+                const device = parts[1];
+                const status = parts[2];
+                
+                if (!devices.has(deviceId)) {
+                    devices.set(deviceId, {
+                        id: deviceId,
+                        group: groupId,
+                        status: status,
+                        lastSeen: new Date(),
+                        temperature: null,
+                        active: false,
+                        telemetry: {}
+                    });
+                } else {
+                    devices.get(deviceId).status = status;
+                    devices.get(deviceId).lastSeen = new Date();
+                    devices.get(deviceId).active = (status === 'DEVICE_ACTIVE');
+                }
+            }
+            
+            updateDevicesList();
+        }
+
+        function handleTelemetryMessage(topic, message) {
+            try {
+                const telemetry = JSON.parse(message);
+                const deviceId = telemetry.device_id;
+                
+                if (devices.has(deviceId)) {
+                    const device = devices.get(deviceId);
+                    device.telemetry = telemetry;
+                    device.lastSeen = new Date();
+                    
+                    // Adiciona ao gráfico de atuadores
+                    addActuatorData(deviceId, telemetry);
+                }
+                
+                updateDevicesList();
+            } catch (error) {
+                console.error('Erro ao processar telemetria:', error);
+            }
+        }
+
+        function updateConnectionStatus(connected) {
+            const statusElement = document.getElementById('connectionStatus');
+            const mqttStatus = document.getElementById('mqttStatus');
+            const mqttStatusText = document.getElementById('mqttStatusText');
+            
+            if (connected) {
+                statusElement.textContent = 'Conectado ao MQTT';
+                statusElement.className = 'connection-status connected';
+                mqttStatus.className = 'status-indicator status-online pulsing';
+                mqttStatusText.textContent = 'Conectado';
+            } else {
+                statusElement.textContent = 'Desconectado do MQTT';
+                statusElement.className = 'connection-status disconnected';
+                mqttStatus.className = 'status-indicator status-offline';
+                mqttStatusText.textContent = 'Desconectado';
+            }
+        }
+
+        function updateDevicesList() {
+            const devicesList = document.getElementById('devicesList');
+            
+            if (devices.size === 0) {
+                devicesList.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">Aguardando dispositivos...</div>';
+                return;
+            }
+            
+            let html = '';
+            devices.forEach((device, id) => {
+                const lastSeenText = device.lastSeen ? device.lastSeen.toLocaleTimeString() : 'Nunca';
+                const rssiText = device.telemetry?.wifi_rssi ? `${device.telemetry.wifi_rssi}dBm` : '--';
+                const statusColor = device.active ? '#4CAF50' : (device.status === 'CONNECTED' ? '#2196F3' : '#666');
+                
+                html += `
+                    <div class="device-item">
+                        <div class="device-info">
+                            <div class="device-name">${device.id}</div>
+                            <div class="device-details">
+                                Status: <span style="color: ${statusColor}; font-weight: bold;">${device.status}</span> | 
+                                RSSI: ${rssiText} | 
+                                LED: ${device.telemetry?.led_blinking ? '🟢 Piscando' : '🔴 Parado'} |
+                                Buzzer: ${device.telemetry?.buzzer_active ? '🔊 Ativo' : '🔇 Inativo'} |
+                                Última atualização: ${lastSeenText}
+                            </div>
+                        </div>
+                        <div class="device-controls">
+                            <button class="btn btn-activate" onclick="sendCommand('${id}', 'ACTIVATE')">Ativar</button>
+                            <button class="btn btn-deactivate" onclick="sendCommand('${id}', 'DEACTIVATE')">Desativar</button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            devicesList.innerHTML = html;
+        }
+
+        function sendCommand(deviceId, command) {
+            if (client && client.connected) {
+                const topic = `smartpatio/commands/${deviceId}`;
+                client.publish(topic, command);
+                console.log(`Comando enviado: ${topic} -> ${command}`);
+            } else {
+                alert('Não conectado ao broker MQTT');
+            }
+        }
+
+        function updateMetrics() {
+            const totalDevices = devices.size;
+            const activeDevices = Array.from(devices.values()).filter(d => d.active).length;
+            
+            // Calcula RSSI médio
+            const rssiValues = Array.from(devices.values())
+                .map(d => d.telemetry?.wifi_rssi)
+                .filter(rssi => rssi !== null && rssi !== undefined);
+            
+            const avgRssi = rssiValues.length > 0 
+                ? rssiValues.reduce((a, b) => a + b, 0) / rssiValues.length 
+                : null;
+            
+            // Atualiza elementos da UI
+            document.getElementById('totalDevices').textContent = totalDevices;
+            document.getElementById('activeDevices').textContent = activeDevices;
+            document.getElementById('messageCount').textContent = messageCount;
+            document.getElementById('avgRSSI').textContent = avgRssi ? `${avgRssi.toFixed(0)}dBm` : '--dBm';
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('actuatorChart').getContext('2d');
+            actuatorChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'LED Ativo',
+                            data: [],
+                            borderColor: '#4CAF50',
+                            backgroundColor: '#4CAF5020',
+                            fill: false,
+                            tension: 0.1,
+                            stepped: true
+                        },
+                        {
+                            label: 'Buzzer Ativo',
+                            data: [],
+                            borderColor: '#FF9800',
+                            backgroundColor: '#FF980020',
+                            fill: false,
+                            tension: 0.1,
+                            stepped: true
+                        },
+                        {
+                            label: 'Dispositivo Ativo',
+                            data: [],
+                            borderColor: '#2196F3',
+                            backgroundColor: '#2196F320',
+                            fill: false,
+                            tension: 0.1,
+                            stepped: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            min: 0,
+                            max: 1,
+                            ticks: {
+                                stepSize: 1,
+                                callback: function(value) {
+                                    return value === 1 ? 'Ativo' : 'Inativo';
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Status dos Atuadores'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Tempo'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function addActuatorData(deviceId, telemetry) {
+            const now = new Date().toLocaleTimeString();
+            
+            // Adiciona novo ponto aos dados
+            const ledValue = telemetry.led_blinking ? 1 : 0;
+            const buzzerValue = telemetry.buzzer_active ? 1 : 0;
+            const deviceValue = telemetry.device_active ? 1 : 0;
+            
+            actuatorChart.data.datasets[0].data.push({x: now, y: ledValue});
+            actuatorChart.data.datasets[1].data.push({x: now, y: buzzerValue});
+            actuatorChart.data.datasets[2].data.push({x: now, y: deviceValue});
+            
+            // Remove pontos antigos (mantém últimos 20)
+            actuatorChart.data.datasets.forEach(dataset => {
+                if (dataset.data.length > 20) {
+                    dataset.data.shift();
+                }
+            });
+            
+            // Atualiza labels
+            if (actuatorChart.data.labels.length < actuatorChart.data.datasets[0].data.length) {
+                actuatorChart.data.labels = actuatorChart.data.datasets[0].data.map(d => d.x);
+            }
+            
+            // Remove labels antigas
+            if (actuatorChart.data.labels.length > 20) {
+                actuatorChart.data.labels.shift();
+            }
+            
+            actuatorChart.update('none');
+        }
+    </script>
+</body>
+</html>

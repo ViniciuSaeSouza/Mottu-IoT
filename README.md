@@ -1,70 +1,129 @@
-# 🚦 SmartPatio IoT - Mottu Challenge
+# 🚦 SmartPatio IoT - Sprint 3 - Mottu Challenge
 
-Este repositório contém o firmware e documentação do **SmartPatio**, um sistema IoT para monitoramento e sinalização de motocicletas em pátios, desenvolvido para o Mottu Challenge (FIAP, Maio/2025).
+Sistema IoT para monitoramento e sinalização de motocicletas em pátios, desenvolvido para atender aos requisitos da Sprint 3 (FIAP, Outubro/2025).
 
----
+## 📌 Resumo da Implementação
 
-## 📌 Visão Geral
-
-O projeto visa otimizar a localização de motocicletas nos pátios da empresa Mottu, utilizando ESP32, sinalização visual (NeoPixel) e sonora (buzzer), comunicação via MQTT e integração com aplicativo mobile.
-
----
-
-## 🧰 Tecnologias Utilizadas
-
-- **ESP32**: Microcontrolador com Wi-Fi.
-- **MQTT (HiveMQ Cloud ou outro broker)**: Protocolo leve de mensagens.
-- **Adafruit NeoPixel**: LED RGB endereçável.
-- **Buzzer**: Sinalização sonora.
-- **PlatformIO/Arduino**: Ambiente de desenvolvimento.
-- **Wokwi**: Simulador de hardware.
-- **MQTT Explorer**: Monitoramento e envio de comandos MQTT.
+✅ **IoT com 2 atuadores distintos**: LED NeoPixel e Buzzer  
+✅ **Comunicação MQTT em tempo real**: Via broker público HiveMQ  
+✅ **Dashboard web**: Interface simples com dados em tempo real  
+✅ **Persistência de dados**: Sistema de logs CSV automático  
+✅ **Teste funcional**: Scripts de demonstração e validação  
 
 ---
 
-## ⚙️ Funcionalidades
+## 🏗️ Arquitetura do Sistema
 
-- Conexão automática à rede Wi-Fi e broker MQTT.
-- Recebimento de comandos MQTT (`ACTIVATE`, `DEACTIVATE`, `RESET`).
-- Sinalização visual: NeoPixel pisca alternando entre verde, vermelho e azul ao ativar.
-- Sinalização sonora: Buzzer ativo ao receber comando de ativação.
-- Publicação de status no tópico MQTT.
-- Reconexão automática em caso de perda de conexão.
-- Feedback visual de status de conexão (cores do NeoPixel).
-- Integração futura com triangulação Wi-Fi para rastreamento.
+```
+ESP32 (SmartPatio)
+├── 💡 LED NeoPixel (sinalização visual)
+├── 🔊 Buzzer (sinalização sonora)
+├── 📡 WiFi + MQTT (comunicação)
+└── 📊 Telemetria (status em tempo real)
+    ↓
+🌐 Broker MQTT (broker.hivemq.com)
+    ↓
+├── 🖥️ Dashboard Web (visualização)
+├── 💾 Data Logger (persistência)
+└── 🧪 Scripts de Teste (demonstração)
+```
 
 ---
 
-## 📡 Triangulação de Sinal 
+## 🚀 Configuração Rápida
 
-Para aumentar a precisão na localização das motocicletas em pátios maiores,  uma camada adicional de rastreamento com triangulação baseada na intensidade do sinal Wi-Fi (RSSI) entre múltiplos pontos de escuta (ESP32) será adicionada.
+### 1. Hardware/Simulação
+- **Opção A**: Use o simulador [Wokwi](https://wokwi.com/) com o código `src/main.cpp`
+- **Opção B**: ESP32 real com LED NeoPixel (pino 2) e Buzzer (pino 4)
 
-### 📍 Como funciona:
-- Múltiplos dispositivos ESP32 ficam fixos no pátio e atuam como “beacons passivos”.
-- Cada moto emite pacotes periódicos contendo seu ID único.
-- Os pontos fixos registram a intensidade do sinal (RSSI) desses pacotes.
-- A média ponderada da intensidade dos sinais recebidos por cada ponto é usada para estimar a zona aproximada da moto.
-### 📶 Fluxo da Triangulação
+### 2. Software
+```bash
+# Instalar dependências Python
+./install.sh        # Linux/Mac
+install.bat         # Windows
 
-1. **Moto (ESP32 móvel)** emite pacotes contendo seu ID (broadcast UDP ou MQTT retain).
-2. **ESP32 fixos** escutam esses pacotes e registram:
-   - RSSI (força do sinal)
-   - Timestamp
-   - ID do emissor (ex: `MOTO_123`)
-3. Cada ponto envia os dados para o broker MQTT:
-   - Tópico: `smartpatio/scan`
-   - Mensagem JSON:
-     ```json
-     {
-       "id_moto": "MOTO_123",
-       "rssi": -58,
-       "ponto": "P1",
-       "timestamp": 1716552712
-     }
-     ```
-4. O backend processa os valores de RSSI de múltiplos pontos para estimar a posição relativa da moto em uma zona (ex: Zona A, Zona B).
+# Ou manualmente:
+pip install paho-mqtt matplotlib pandas numpy
+```
 
-> ⚠️ Esta funcionalidade é teórica nesta versão do projeto e será implementada futuramente.
+### 3. Execução
+```bash
+# 1. Subir o ESP32/Wokwi com src/main.cpp
+# 2. Teste interativo
+python demo.py
+
+# 3. Demonstração automática
+python demo.py auto
+
+# 4. Data logger (opcional)
+python data_logger.py
+
+# 5. Abrir dashboard/index.html no navegador
+```
+
+---
+
+## 🧪 Demonstração Funcional
+
+### Cenário de Teste
+1. **Dispositivo inativo**: LED verde fixo, buzzer desligado
+2. **Comando ACTIVATE**: LED pisca (verde/vermelho/azul) + buzzer toca melodia
+3. **Comando DEACTIVATE**: Volta ao estado inativo
+4. **Telemetria**: Dados enviados a cada 5 segundos via MQTT
+
+### Scripts de Teste
+- `demo.py` - Interface interativa para envio de comandos
+- `data_logger.py` - Coleta e armazena dados em CSV
+- `dashboard/index.html` - Visualização web em tempo real
+
+---
+
+## 📊 Dados e Métricas
+
+### Telemetria Coletada
+```json
+{
+  "device_id": "TESTE",
+  "timestamp": 1696175431000,
+  "device_active": true,
+  "led_blinking": true,
+  "buzzer_active": true,
+  "wifi_rssi": -45
+}
+```
+
+### Persistência
+- **Formato**: CSV com timestamp, tópico, dados JSON
+- **Localização**: `smartpatio_data.csv`
+- **Frequência**: Todos os eventos MQTT são registrados
+
+---
+
+## 📡 Comunicação MQTT
+
+### Tópicos
+```
+smartpatio/commands/TESTE   → Comandos (ACTIVATE/DEACTIVATE/RESET)
+smartpatio/status/TESTE     → Status do dispositivo
+smartpatio/telemetry/TESTE  → Dados de telemetria JSON
+```
+
+### Broker
+- **Host**: broker.hivemq.com
+- **Porta**: 1883 (público, sem autenticação)
+- **Protocolo**: MQTT v3.1.1
+
+---
+
+## 🎯 Atendimento aos Requisitos
+
+| Requisito | Status | Implementação |
+|-----------|--------|---------------|
+| **3 sensores/atuadores** | ✅ | LED NeoPixel + Buzzer + WiFi RSSI |
+| **Comunicação MQTT** | ✅ | Tempo real via HiveMQ |
+| **Dashboard simples** | ✅ | HTML5 + JavaScript + Chart.js |
+| **Persistência dados** | ✅ | CSV automático via Python |
+| **Teste funcional** | ✅ | Scripts demo + logs automáticos |
 
 ---
 
@@ -73,45 +132,55 @@ Para aumentar a precisão na localização das motocicletas em pátios maiores, 
 ```
 smartPatio/
 ├── src/
-│   └── main.cpp          # Código-fonte principal do firmware
-├── platformio.ini        # Configuração do PlatformIO
-├── wokwi.toml            # Configuração para simulação Wokwi
-└── README.md             # Este documento
+│   └── main.cpp              # Firmware ESP32
+├── dashboard/
+│   └── index.html            # Dashboard web
+├── demo.py                   # Script de teste interativo
+├── data_logger.py            # Sistema de persistência
+├── requirements.txt          # Dependências Python
+├── install.bat / install.sh  # Scripts de instalação
+└── README.md                 # Esta documentação
 ```
 
 ---
 
-## 🚀 Como Utilizar
+## 🔧 Tecnologias Utilizadas
 
-1. **Configurar Wi-Fi e MQTT**
-   - Edite as variáveis `WIFI_SSID`, `WIFI_PASSWORD`, `MQTT_BROKER`, `MQTT_PORT` em `src/main.cpp` conforme sua rede e broker.
-
-2. **Compilar e enviar para o ESP32**
-   - Use o PlatformIO no VS Code:
-     ```
-     pio run --target upload
-     ```
-
-3. **Simular no Wokwi**
-   - Ajuste o caminho do firmware no `wokwi.toml` conforme sua pasta de build.
-   - Compile o projeto e inicie a simulação no Wokwi.
-
-4. **Monitorar e controlar via MQTT**
-   - Use o MQTT Explorer para conectar ao broker.
-   - Publique comandos no tópico `smartpatio/commands`:
-     - `ACTIVATE` — Ativa sinalização visual e sonora.
-     - `DEACTIVATE` — Desativa sinalização.
-     - `RESET` — Reinicia o dispositivo.
-   - Veja os status publicados em `smartpatio/status`.
+- **Hardware**: ESP32, LED NeoPixel, Buzzer
+- **Firmware**: Arduino/PlatformIO, WiFi, MQTT
+- **Backend**: Python, paho-mqtt, pandas
+- **Frontend**: HTML5, JavaScript, Chart.js
+- **Comunicação**: MQTT (HiveMQ Cloud)
+- **Dados**: CSV, JSON
 
 ---
 
-## 📊 Resultados Esperados
+## 📈 Resultados Esperados
 
-- Redução do tempo de localização de motocicletas.
-- Melhoria na eficiência operacional do pátio.
-- Facilidade de integração com sistemas mobile e web.
-- Expansão futura com localização por zonas via triangulação.
+### Performance
+- **Latência MQTT**: < 500ms (rede local)
+- **Frequência telemetria**: 5 segundos
+- **Disponibilidade**: 99%+ (dependente da rede)
+
+### Funcionalidades
+- ✅ Ativação/desativação remota
+- ✅ Feedback visual (LED colorido)
+- ✅ Feedback sonoro (melodia)
+- ✅ Monitoramento em tempo real
+- ✅ Histórico persistente
+- ✅ Dashboard responsivo
+
+---
+
+## 🎥 Demonstração
+
+O sistema funciona com:
+1. **ESP32/Wokwi** executando o firmware
+2. **Dashboard** mostrando dados em tempo real
+3. **Scripts Python** para controle e logging
+4. **Comunicação MQTT** conectando tudo
+
+**Resultado**: Sistema IoT funcional demonstrando integração completa entre hardware, comunicação e interface web.
 
 ---
 
