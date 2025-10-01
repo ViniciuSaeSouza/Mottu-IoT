@@ -1,0 +1,1 @@
+timestamp,iso_timestamp,topic,message_type,device_id,group_id,status,temperature,device_active,led_blinking,buzzer_active,wifi_rssi,raw_message

@@ -15,7 +15,7 @@ import logging
 # Configurações
 MQTT_BROKER = "broker.hivemq.com"
 MQTT_PORT = 1883
-CSV_FILE = "smartpatio_data.csv"
+CSV_FILE = "src/output/smartpatio_data.csv"
 LOG_FILE = "mqtt_logger.log"
 
 # Configurar logging
@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 class SmartPatioDataLogger:
     def __init__(self):
-        self.client = mqtt.Client()
+        self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
         self.client.on_disconnect = self.on_disconnect
@@ -50,6 +50,12 @@ class SmartPatioDataLogger:
         
     def init_csv_file(self):
         """Inicializa o arquivo CSV com cabeçalhos se não existir"""
+        # Criar diretório se não existir
+        csv_dir = os.path.dirname(CSV_FILE)
+        if csv_dir and not os.path.exists(csv_dir):
+            os.makedirs(csv_dir)
+            logger.info(f"Diretório criado: {csv_dir}")
+            
         if not os.path.exists(CSV_FILE):
             with open(CSV_FILE, 'w', newline='', encoding='utf-8') as file:
                 writer = csv.writer(file)
@@ -70,7 +76,7 @@ class SmartPatioDataLogger:
                 ])
             logger.info(f"Arquivo CSV criado: {CSV_FILE}")
 
-    def on_connect(self, client, userdata, flags, rc):
+    def on_connect(self, client, userdata, flags, rc, properties=None):
         """Callback de conexão MQTT"""
         if rc == 0:
             logger.info("Conectado ao broker MQTT")
@@ -87,7 +93,7 @@ class SmartPatioDataLogger:
         else:
             logger.error(f"Falha na conexão MQTT: {rc}")
 
-    def on_disconnect(self, client, userdata, rc):
+    def on_disconnect(self, client, userdata, rc, properties=None):
         """Callback de desconexão MQTT"""
         logger.warning("Desconectado do broker MQTT")
 
@@ -284,5 +290,5 @@ if __name__ == "__main__":
     print("🚦 SmartPatio Data Logger - Mottu IoT Challenge")
     print("Pressione Ctrl+C para parar\n")
     
-    logger = SmartPatioDataLogger()
-    logger.start()
+    data_logger = SmartPatioDataLogger()
+    data_logger.start()
