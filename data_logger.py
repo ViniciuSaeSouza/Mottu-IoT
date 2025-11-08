@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Sistema de Persistência de Dados para SmartPatio IoT
-Coleta dados MQTT e armazena em arquivo CSV
+Coleta dados MQTT e armazena no Oracle Database + CSV backup
 """
 
 import paho.mqtt.client as mqtt
@@ -11,12 +11,18 @@ import os
 import threading
 from datetime import datetime
 import logging
+import oracledb
 
 # Configurações
 MQTT_BROKER = "broker.hivemq.com"
 MQTT_PORT = 1883
 CSV_FILE = "src/output/smartpatio_data.csv"
 LOG_FILE = "mqtt_logger.log"
+
+# Configurações Oracle Database
+ORACLE_DSN = "oracle.fiap.com.br:1521/orcl"
+ORACLE_USER = "RM554456"
+ORACLE_PASSWORD = "080995"
 
 # Configurar logging
 logging.basicConfig(
@@ -37,17 +43,86 @@ class SmartPatioDataLogger:
         self.client.on_message = self.on_message
         self.client.on_disconnect = self.on_disconnect
         
+        # Conexão Oracle
+        self.oracle_connection = None
+        
         # Estatísticas
         self.stats = {
             'messages_received': 0,
+            'messages_saved_oracle': 0,
+            'oracle_errors': 0,
             'devices_seen': set(),
             'start_time': datetime.now(),
             'last_message_time': None
         }
         
-        # Inicializar arquivo CSV se não existir
+        # Inicializar conexões
+        self.init_oracle_connection()
         self.init_csv_file()
         
+    def init_oracle_connection(self):
+        """Inicializa a conexão com Oracle Database"""
+        try:
+            logger.info("Conectando ao Oracle Database...")
+            self.oracle_connection = oracledb.connect(
+                user=ORACLE_USER,
+                password=ORACLE_PASSWORD,
+                dsn=ORACLE_DSN
+            )
+            logger.info("Conectado ao Oracle Database com sucesso!")
+            
+            # Criar tabela se não existir
+            self.create_oracle_table()
+            
+        except Exception as e:
+            logger.error(f"Erro ao conectar Oracle: {e}")
+            logger.info("Continuando apenas com CSV...")
+            self.oracle_connection = None
+
+    def create_oracle_table(self):
+        """Cria a tabela no Oracle se não existir"""
+        if not self.oracle_connection:
+            return
+            
+        try:
+            cursor = self.oracle_connection.cursor()
+            
+            # Criar tabela para dados IoT
+            create_table_sql = """
+                BEGIN
+                    EXECUTE IMMEDIATE 'CREATE TABLE SMARTPATIO_IOT_DATA (
+                        ID NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                        TIMESTAMP_ORIG NUMBER,
+                        ISO_TIMESTAMP TIMESTAMP,
+                        TOPIC VARCHAR2(200),
+                        MESSAGE_TYPE VARCHAR2(50),
+                        DEVICE_ID VARCHAR2(50),
+                        GROUP_ID VARCHAR2(50),
+                        STATUS VARCHAR2(100),
+                        TEMPERATURE NUMBER,
+                        DEVICE_ACTIVE NUMBER(1),
+                        LED_BLINKING NUMBER(1), 
+                        BUZZER_ACTIVE NUMBER(1),
+                        WIFI_RSSI NUMBER,
+                        RAW_MESSAGE CLOB,
+                        CREATED_AT TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )';
+                EXCEPTION
+                    WHEN OTHERS THEN
+                        IF SQLCODE != -955 THEN  -- Tabela já existe
+                            RAISE;
+                        END IF;
+                END;
+            """
+            
+            cursor.execute(create_table_sql)
+            self.oracle_connection.commit()
+            cursor.close()
+            logger.info("Tabela SMARTPATIO_IOT_DATA criada/verificada")
+            
+        except Exception as e:
+            logger.error(f"Erro ao criar tabela Oracle: {e}")
+
     def init_csv_file(self):
         """Inicializa o arquivo CSV com cabeçalhos se não existir"""
         # Criar diretório se não existir
@@ -147,7 +222,7 @@ class SmartPatioDataLogger:
                 'raw_message': message
             }
             
-            self.save_to_csv(data)
+            self.save_data(data)
             
         except Exception as e:
             logger.error(f"Erro ao processar status: {e}")
@@ -178,7 +253,7 @@ class SmartPatioDataLogger:
                 'raw_message': message
             }
             
-            self.save_to_csv(data)
+            self.save_data(data)
             
         except json.JSONDecodeError as e:
             logger.error(f"Erro ao decodificar JSON da telemetria: {e}")
@@ -207,10 +282,71 @@ class SmartPatioDataLogger:
                 'raw_message': message
             }
             
-            self.save_to_csv(data)
+            self.save_data(data)
             
         except Exception as e:
             logger.error(f"Erro ao processar comando: {e}")
+
+    def save_data(self, data):
+        """Salva dados no Oracle Database e CSV (backup)"""
+        # Salvar no Oracle Database
+        if self.oracle_connection:
+            self.save_to_oracle(data)
+        
+        # Salvar no CSV como backup
+        self.save_to_csv(data)
+
+    def save_to_oracle(self, data):
+        """Salva dados no Oracle Database"""
+        try:
+            cursor = self.oracle_connection.cursor()
+            
+            # Converter valores booleanos para número Oracle (0/1)
+            device_active = 1 if data['device_active'] is True else (0 if data['device_active'] is False else None)
+            led_blinking = 1 if data['led_blinking'] is True else (0 if data['led_blinking'] is False else None)
+            buzzer_active = 1 if data['buzzer_active'] is True else (0 if data['buzzer_active'] is False else None)
+            
+            # Preparar dados para inserção
+            oracle_data = {
+                'timestamp_orig': data['timestamp'],
+                'iso_timestamp': datetime.fromisoformat(data['iso_timestamp']),
+                'topic': data['topic'],
+                'message_type': data['message_type'],
+                'device_id': data['device_id'],
+                'group_id': data['group_id'],
+                'status': data['status'],
+                'temperature': data['temperature'],
+                'device_active': device_active,
+                'led_blinking': led_blinking,
+                'buzzer_active': buzzer_active,
+                'wifi_rssi': data['wifi_rssi'],
+                'raw_message': data['raw_message']
+            }
+            
+            # Inserir no Oracle
+            cursor.execute("""
+                INSERT INTO SMARTPATIO_IOT_DATA 
+                (TIMESTAMP_ORIG, ISO_TIMESTAMP, TOPIC, MESSAGE_TYPE, DEVICE_ID, 
+                 GROUP_ID, STATUS, TEMPERATURE, DEVICE_ACTIVE, LED_BLINKING, 
+                 BUZZER_ACTIVE, WIFI_RSSI, RAW_MESSAGE)
+                VALUES (:timestamp_orig, :iso_timestamp, :topic, :message_type, :device_id,
+                        :group_id, :status, :temperature, :device_active, :led_blinking,
+                        :buzzer_active, :wifi_rssi, :raw_message)
+            """, oracle_data)
+            
+            self.oracle_connection.commit()
+            cursor.close()
+            
+            self.stats['messages_saved_oracle'] += 1
+            
+        except Exception as e:
+            logger.error(f"Erro ao salvar no Oracle: {e}")
+            self.stats['oracle_errors'] += 1
+            
+            # Tentar reconectar se a conexão foi perdida
+            if "not connected" in str(e).lower() or "connection" in str(e).lower():
+                logger.info("Tentando reconectar ao Oracle...")
+                self.init_oracle_connection()
 
     def save_to_csv(self, data):
         """Salva dados no arquivo CSV"""
@@ -239,20 +375,59 @@ class SmartPatioDataLogger:
         """Imprime estatísticas do sistema"""
         uptime = datetime.now() - self.stats['start_time']
         
-        print("\n" + "="*50)
-        print("📊 ESTATÍSTICAS DO SISTEMA")
-        print("="*50)
-        print(f"⏱️  Tempo de execução: {uptime}")
-        print(f"📨 Mensagens recebidas: {self.stats['messages_received']}")
-        print(f"📱 Dispositivos únicos: {len(self.stats['devices_seen'])}")
-        print(f"🔧 Dispositivos: {', '.join(self.stats['devices_seen']) if self.stats['devices_seen'] else 'Nenhum'}")
+        print("\n" + "="*60)
+        print("ESTATISTICAS DO SISTEMA SMARTPATIO")
+        print("="*60)
+        print(f"Tempo de execucao: {uptime}")
+        print(f"Mensagens MQTT recebidas: {self.stats['messages_received']}")
+        print(f"Mensagens salvas no Oracle: {self.stats['messages_saved_oracle']}")
+        print(f"Erros Oracle: {self.stats['oracle_errors']}")
+        print(f"Dispositivos unicos: {len(self.stats['devices_seen'])}")
+        print(f"Dispositivos: {', '.join(self.stats['devices_seen']) if self.stats['devices_seen'] else 'Nenhum'}")
         
         if self.stats['last_message_time']:
             time_since_last = datetime.now() - self.stats['last_message_time']
-            print(f"📡 Última mensagem: {time_since_last.total_seconds():.1f}s atrás")
+            print(f"Ultima mensagem: {time_since_last.total_seconds():.1f}s atras")
         
-        print(f"💾 Arquivo de dados: {CSV_FILE}")
-        print("="*50)
+        # Status das conexões
+        oracle_status = "Conectado" if self.oracle_connection else "Desconectado"
+        print(f"Oracle Database: {oracle_status}")
+        print(f"Arquivo CSV backup: {CSV_FILE}")
+        
+        # Mostrar resumo do Oracle se conectado
+        if self.oracle_connection:
+            self.show_oracle_summary()
+            
+        print("="*60)
+        
+    def show_oracle_summary(self):
+        """Mostra resumo dos dados no Oracle"""
+        try:
+            cursor = self.oracle_connection.cursor()
+            
+            # Contar total de registros
+            cursor.execute("SELECT COUNT(*) FROM SMARTPATIO_IOT_DATA")
+            total_records = cursor.fetchone()[0]
+            
+            # Contar por tipo de mensagem
+            cursor.execute("""
+                SELECT MESSAGE_TYPE, COUNT(*) 
+                FROM SMARTPATIO_IOT_DATA 
+                GROUP BY MESSAGE_TYPE 
+                ORDER BY COUNT(*) DESC
+            """)
+            message_types = cursor.fetchall()
+            
+            cursor.close()
+            
+            print(f"Total de registros no Oracle: {total_records}")
+            if message_types:
+                print("Por tipo de mensagem:")
+                for msg_type, count in message_types:
+                    print(f"   - {msg_type or 'vazio'}: {count}")
+                    
+        except Exception as e:
+            logger.error(f"Erro ao obter resumo Oracle: {e}")
 
     def start(self):
         """Inicia o sistema de coleta de dados"""
@@ -276,6 +451,9 @@ class SmartPatioDataLogger:
             logger.error(f"Erro no sistema: {e}")
         finally:
             self.client.disconnect()
+            if self.oracle_connection:
+                self.oracle_connection.close()
+                logger.info("Conexao Oracle fechada")
             self.print_stats()
 
     def periodic_stats(self):
@@ -287,7 +465,8 @@ class SmartPatioDataLogger:
         stats_thread.start()
 
 if __name__ == "__main__":
-    print("🚦 SmartPatio Data Logger - Mottu IoT Challenge")
+    print("SmartPatio Data Logger - Mottu IoT Challenge")
+    print("Salvando dados IoT no Oracle Database + CSV backup")
     print("Pressione Ctrl+C para parar\n")
     
     data_logger = SmartPatioDataLogger()

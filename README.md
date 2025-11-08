@@ -1,13 +1,14 @@
-# 🚦 SmartPatio IoT - Sprint 3 - Mottu Challenge
+# 🚦 SmartPatio IoT - Mottu Challenge
 
-Sistema IoT para monitoramento e sinalização de motocicletas em pátios, desenvolvido para atender aos requisitos da Sprint 3 (FIAP, Outubro/2025).
+Sistema IoT para monitoramento e sinalização de motocicletas em pátios.
 
 ## 📌 Resumo da Implementação
 
 ✅ **IoT com 2 atuadores distintos**: LED NeoPixel e Buzzer  
 ✅ **Comunicação MQTT em tempo real**: Via broker público HiveMQ  
 ✅ **Dashboard web**: Interface simples com dados em tempo real  
-✅ **Persistência de dados**: Sistema de logs CSV automático  
+✅ **Persistência de dados**: Oracle Database + CSV backup  
+✅ **Banco de dados**: Oracle Database FIAP integrado  
 ✅ **Teste funcional**: Scripts de demonstração e validação  
 
 ---
@@ -24,7 +25,8 @@ ESP32 (SmartPatio)
 🌐 Broker MQTT (broker.hivemq.com)
     ↓
 ├── 🖥️ Dashboard Web (visualização)
-├── 💾 Data Logger (persistência)
+├── 💾 Data Logger (Oracle + CSV)
+├── 🗃️ Oracle Database (persistência principal)
 └── 🧪 Scripts de Teste (demonstração)
 ```
 
@@ -43,7 +45,7 @@ ESP32 (SmartPatio)
 install.bat         # Windows
 
 # Ou manualmente:
-pip install paho-mqtt matplotlib pandas numpy
+pip install paho-mqtt matplotlib pandas numpy oracledb
 ```
 
 ### 3. Execução
@@ -55,7 +57,7 @@ python demo.py
 # 3. Demonstração automática
 python demo.py auto
 
-# 4. Data logger (opcional)
+# 4. Data logger com Oracle Database
 python data_logger.py
 
 # 5. Abrir dashboard/index.html no navegador
@@ -73,7 +75,7 @@ python data_logger.py
 
 ### Scripts de Teste
 - `demo.py` - Interface interativa para envio de comandos
-- `data_logger.py` - Coleta e armazena dados em CSV
+- `data_logger.py` - Coleta e armazena dados no Oracle Database + CSV backup
 - `dashboard/index.html` - Visualização web em tempo real
 
 ---
@@ -93,13 +95,53 @@ python data_logger.py
 ```
 
 ### Persistência
-- **Formato**: CSV com timestamp, tópico, dados JSON
-- **Localização**: `smartpatio_data.csv`
-- **Frequência**: Todos os eventos MQTT são registrados
+- **Principal**: Oracle Database (tabela `SMARTPATIO_IOT_DATA`)
+- **Backup**: CSV com timestamp, tópico, dados JSON
+- **Localização CSV**: `src/output/smartpatio_data.csv`
+- **Conexão Oracle**: `oracle.fiap.com.br:1521/orcl`
+- **Frequência**: Todos os eventos MQTT são registrados em tempo real
 
 ---
 
-## 📡 Comunicação MQTT
+## �️ Oracle Database Integration
+
+### Configuração do Banco
+- **Servidor**: oracle.fiap.com.br:1521/orcl
+- **Usuário**: RM554456
+- **Tabela Principal**: `SMARTPATIO_IOT_DATA`
+
+### Estrutura da Tabela
+```sql
+CREATE TABLE SMARTPATIO_IOT_DATA (
+    ID NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    TIMESTAMP_ORIG NUMBER,
+    ISO_TIMESTAMP TIMESTAMP,
+    TOPIC VARCHAR2(200),
+    MESSAGE_TYPE VARCHAR2(50),
+    DEVICE_ID VARCHAR2(50),
+    GROUP_ID VARCHAR2(50),
+    STATUS VARCHAR2(100),
+    TEMPERATURE NUMBER,
+    DEVICE_ACTIVE NUMBER(1),
+    LED_BLINKING NUMBER(1), 
+    BUZZER_ACTIVE NUMBER(1),
+    WIFI_RSSI NUMBER,
+    RAW_MESSAGE CLOB,
+    CREATED_AT TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### Funcionalidades
+- ✅ **Conexão automática** ao iniciar o data_logger
+- ✅ **Criação automática** da tabela se não existir
+- ✅ **Reconexão automática** em caso de perda de conexão
+- ✅ **Backup em CSV** como redundância
+- ✅ **Logs detalhados** de todas as operações
+- ✅ **Estatísticas em tempo real** do banco
+
+---
+
+## �📡 Comunicação MQTT
 
 ### Tópicos
 ```
@@ -122,7 +164,8 @@ smartpatio/telemetry/TESTE  → Dados de telemetria JSON
 | **3 sensores/atuadores** | ✅ | LED NeoPixel + Buzzer + WiFi RSSI |
 | **Comunicação MQTT** | ✅ | Tempo real via HiveMQ |
 | **Dashboard simples** | ✅ | HTML5 + JavaScript + Chart.js |
-| **Persistência dados** | ✅ | CSV automático via Python |
+| **Persistência dados** | ✅ | Oracle Database + CSV backup |
+| **Banco de dados** | ✅ | Oracle Database FIAP integrado |
 | **Teste funcional** | ✅ | Scripts demo + logs automáticos |
 
 ---
@@ -136,7 +179,7 @@ smartPatio/
 ├── dashboard/
 │   └── index.html            # Dashboard web
 ├── demo.py                   # Script de teste interativo
-├── data_logger.py            # Sistema de persistência
+├── data_logger.py            # Sistema de persistência Oracle + CSV
 ├── requirements.txt          # Dependências Python
 ├── install.bat / install.sh  # Scripts de instalação
 └── README.md                 # Esta documentação
@@ -148,10 +191,11 @@ smartPatio/
 
 - **Hardware**: ESP32, LED NeoPixel, Buzzer
 - **Firmware**: Arduino/PlatformIO, WiFi, MQTT
-- **Backend**: Python, paho-mqtt, pandas
+- **Backend**: Python, paho-mqtt, pandas, oracledb
+- **Banco de Dados**: Oracle Database 19c
 - **Frontend**: HTML5, JavaScript, Chart.js
 - **Comunicação**: MQTT (HiveMQ Cloud)
-- **Dados**: CSV, JSON
+- **Dados**: Oracle Database, CSV, JSON
 
 ---
 
@@ -180,7 +224,43 @@ O sistema funciona com:
 3. **Scripts Python** para controle e logging
 4. **Comunicação MQTT** conectando tudo
 
-**Resultado**: Sistema IoT funcional demonstrando integração completa entre hardware, comunicação e interface web.
+**Resultado**: Sistema IoT funcional demonstrando integração completa entre hardware, comunicação, interface web e banco de dados Oracle.
+
+---
+
+## 📊 Monitoramento e Logs
+
+### Data Logger - Saída do Sistema
+```
+SmartPatio Data Logger - Mottu IoT Challenge
+Salvando dados IoT no Oracle Database + CSV backup
+Pressione Ctrl+C para parar
+
+Conectando ao Oracle Database...
+Conectado ao Oracle Database com sucesso!
+Tabela SMARTPATIO_IOT_DATA criada/verificada
+Iniciando sistema de persistência SmartPatio...
+Conectando ao broker broker.hivemq.com:1883
+Conectado ao broker MQTT
+Subscrito ao tópico: smartpatio/status/+
+Subscrito ao tópico: smartpatio/telemetry/+
+Subscrito ao tópico: smartpatio/commands/+
+Mensagem recebida: smartpatio/telemetry/TESTE -> {"device_id":"TESTE",...}
+```
+
+### Estatísticas Automáticas
+O sistema exibe a cada 30 segundos:
+- Tempo de execução
+- Mensagens MQTT recebidas
+- Mensagens salvas no Oracle
+- Erros Oracle (se houver)
+- Dispositivos únicos detectados
+- Status da conexão Oracle
+- Total de registros no banco
+
+### Arquivos de Log
+- **mqtt_logger.log**: Log detalhado de todas as operações
+- **src/output/smartpatio_data.csv**: Backup em CSV dos dados
 
 ---
 
