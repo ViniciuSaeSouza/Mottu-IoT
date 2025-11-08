@@ -103,7 +103,7 @@ python data_logger.py
 
 ---
 
-## �️ Oracle Database Integration
+## Oracle Database Integration
 
 ### Configuração do Banco
 - **Servidor**: oracle.fiap.com.br:1521/orcl
@@ -141,7 +141,7 @@ CREATE TABLE SMARTPATIO_IOT_DATA (
 
 ---
 
-## �📡 Comunicação MQTT
+## 📡 Comunicação MQTT
 
 ### Tópicos
 ```
